@@ -77,7 +77,7 @@ def find_nearby_places(place_type: str, latitude: float, longitude: float, radiu
 
 
 def build_agent():
-    llm = ChatAnthropic(model="claude-sonnet-4.5", temperature=0)
+    llm = ChatAnthropic(model="claude-haiku-4-5")
     tools = [geocode_location, find_nearby_places]
     system_prompt = (
         "You are a helpful assistant that finds nearby places like gyms, "
