@@ -1,0 +1,14 @@
+[project]
+name = "nearby-assistant"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.14"
+dependencies = [
+    "langgraph>=0.2.0",
+    "langchain-anthropic>=0.3.0",
+    "python-dotenv>=1.0.0",
+    "requests>=2.32.0",
+    "streamlit>=1.38.0",
+    "streamlit-geolocation>=0.0.10",
+]
