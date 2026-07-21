@@ -2,6 +2,8 @@
 .env
 .env.*
 !example.env
+credentials.json
+token.json
 
 # Python
 __pycache__/
