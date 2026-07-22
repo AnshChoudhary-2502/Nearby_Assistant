@@ -1,10 +1,12 @@
 # Nearby Assistant
 
-Three independent LangGraph assistants, each with its own Streamlit chat UI:
+One Streamlit chat assistant, backed by a LangGraph supervisor that routes each request to the right specialist:
 
 - **`places_assistant/`** — finds nearby places (gyms, restaurants, cafes, ...) using Google Maps Platform APIs.
 - **`gmail_assistant/`** — reads, searches, and manages Gmail, with human-in-the-loop approval before any sending, replying, deleting, or archiving.
 - **`calendar_assistant/`** — reads, searches, and manages Google Calendar events, with human-in-the-loop approval before any create, update, delete, or quick-add.
+
+The three specialists are internal packages, not standalone apps — `supervisor/` is the only entry point.
 
 ## Setup
 
@@ -20,75 +22,43 @@ Three independent LangGraph assistants, each with its own Streamlit chat UI:
 
    | Variable | Where to get it |
    |---|---|
-   | `ANTHROPIC_API_KEY` | [console.anthropic.com](https://console.anthropic.com/) — used by both assistants |
+   | `ANTHROPIC_API_KEY` | [console.anthropic.com](https://console.anthropic.com/) — used by the supervisor and all three specialists |
    | `GOOGLE_MAPS_API_KEY` | [Google Cloud Console](https://console.cloud.google.com/google/maps-apis) — enable **Places API (New)** and **Geocoding API**, and make sure billing is enabled |
 
-## Places assistant
+3. **Gmail/Calendar OAuth (one-time):** create an OAuth client (Desktop App type) in [Google Cloud Console](https://console.cloud.google.com/apis/credentials) with the Gmail API and Google Calendar API enabled, and download the credentials as `gmail_assistant/credentials.json` and `calendar_assistant/credentials.json` respectively. The first request that touches each API opens a browser for consent; the refresh token is then cached in that package's `token.json`.
 
-The assistant is a LangGraph ReAct agent (`create_react_agent`) with two tools:
+## Run it
 
-- **`geocode_location`** — resolves a place name/address typed by the user (e.g. "Koramangala, Bangalore") into latitude/longitude, via the Google **Geocoding API**.
-- **`find_nearby_places`** — searches for places of a given type (`restaurant`, `gym`, `cafe`, ...) around coordinates, via the Google **Places API (New)** Nearby Search endpoint.
-
-The Streamlit frontend additionally requests the browser's GPS location (via `streamlit-geolocation`) so the user can say "near me" without typing an address.
-
-**Run it:**
 ```bash
-uv run streamlit run places_assistant/app.py
-```
-Grant location access when prompted in the sidebar, then chat as usual (e.g. "gyms near me", "restaurants near Koramangala"). Browser geolocation only works over `localhost` or HTTPS.
-
-**Terminal REPL:**
-```bash
-uv run places_assistant/main.py
+uv run streamlit run supervisor/app.py
 ```
 
-## Gmail assistant
+Grant location access when prompted in the sidebar to enable "near me" place searches. When the assistant proposes a sensitive Gmail/Calendar action, approve or deny it in the chat before it proceeds.
 
-A LangGraph ReAct agent with 9 tools covering the Gmail API: `read_emails`, `search_email`, `list_labels`, `send_email`, `reply_email`, `delete_email`, `mark_read`, `mark_unread`, `archive_email`, `create_draft`.
+## How routing works
 
-Sending, replying, deleting, and archiving pause the graph via LangGraph's `interrupt()` and require explicit approval in the UI before taking effect — read-only and reversible actions (reading, searching, listing labels, marking read/unread, drafting) run without interruption. `delete_email` moves messages to Trash rather than permanently deleting them.
+`supervisor/agent.py` builds all three specialist agents (each still a `create_react_agent` with its own tools and, for Gmail/Calendar, its own `interrupt()`-based approval flow) and wires them into a `langgraph-supervisor` graph with a single top-level checkpointer. The supervisor LLM reads the user's message and hands off to whichever specialist(s) it needs, one at a time, using each specialist's response to decide on further handoffs.
 
-**One-time setup:** create an OAuth client (Desktop App type) in [Google Cloud Console](https://console.cloud.google.com/apis/credentials) with the Gmail API enabled, and download it as `gmail_assistant/credentials.json`.
-
-**Run it:**
-```bash
-uv run streamlit run gmail_assistant/app.py
-```
-First run opens a browser for OAuth consent; the refresh token is cached in `gmail_assistant/token.json` afterwards. When the agent proposes a sensitive action, approve or deny it in the chat before it proceeds.
-
-## Calendar assistant
-
-A LangGraph ReAct agent with 8 tools covering the Google Calendar API: `list_calendars`, `list_events`, `search_events`, `get_event`, `create_event`, `update_event`, `delete_event`, `quick_add_event`.
-
-Creating, updating, deleting, and quick-adding events pause the graph via LangGraph's `interrupt()` and require explicit approval in the UI before taking effect — read-only actions (listing calendars, listing/searching events, getting event details) run without interruption.
-
-**One-time setup:** create an OAuth client (Desktop App type) in [Google Cloud Console](https://console.cloud.google.com/apis/credentials) with the Google Calendar API enabled, and download it as `calendar_assistant/credentials.json`.
-
-**Run it:**
-```bash
-uv run streamlit run calendar_assistant/app.py
-```
-First run opens a browser for OAuth consent; the refresh token is cached in `calendar_assistant/token.json` afterwards. When the agent proposes a sensitive action, approve or deny it in the chat before it proceeds.
+Two non-default settings matter for correctness: `output_mode="full_history"` and `add_handoff_back_messages=False`. The library's defaults trim message history and inject a "transferred back to supervisor" message as soon as a specialist's turn ends — including when that turn actually just paused on an approval `interrupt()`. That combination made the paused state look finished, breaking resume after approve/deny.
 
 ## Project structure
 
 ```
 places_assistant/
-  main.py       # LangGraph agent + Google Maps tools
-  app.py        # Streamlit chat frontend
-gmail_assistant/
-  client.py     # Gmail OAuth + API service builder
-  tools.py      # LangChain tools wrapping the Gmail API (human-in-the-loop on sensitive ones)
-  agent.py      # LangGraph agent assembly (checkpointer + tools)
-  app.py        # Streamlit chat frontend with approve/deny UI
-  credentials.json, token.json   # gitignored — created during OAuth setup
+  agent.py      # LangGraph agent + Google Maps tools
 calendar_assistant/
   client.py     # Google Calendar OAuth + API service builder
   tools.py      # LangChain tools wrapping the Calendar API (human-in-the-loop on mutating ones)
   agent.py      # LangGraph agent assembly (checkpointer + tools)
-  app.py        # Streamlit chat frontend with approve/deny UI
   credentials.json, token.json   # gitignored — created during OAuth setup
+gmail_assistant/
+  client.py     # Gmail OAuth + API service builder
+  tools.py      # LangChain tools wrapping the Gmail API (human-in-the-loop on sensitive ones)
+  agent.py      # LangGraph agent assembly (checkpointer + tools)
+  credentials.json, token.json   # gitignored — created during OAuth setup
+supervisor/
+  agent.py      # Builds the three specialists and wires them into a langgraph-supervisor graph
+  app.py        # Streamlit chat frontend with approve/deny UI and location sharing
 example.env     # Template for required API keys / config
 ```
 

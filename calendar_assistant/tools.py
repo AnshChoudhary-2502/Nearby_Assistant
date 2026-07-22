@@ -3,7 +3,7 @@ from datetime import datetime, timezone
 from langchain_core.tools import tool
 from langgraph.types import interrupt
 
-from client import get_calendar_service
+from calendar_assistant.client import get_calendar_service
 
 _service = None
 

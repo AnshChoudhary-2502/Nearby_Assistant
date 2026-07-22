@@ -4,7 +4,7 @@ from email.mime.text import MIMEText
 from langchain_core.tools import tool
 from langgraph.types import interrupt
 
-from client import get_gmail_service
+from gmail_assistant.client import get_gmail_service
 
 _service = None
 

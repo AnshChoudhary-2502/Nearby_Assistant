@@ -87,23 +87,3 @@ def build_agent():
         "and present the results in a clean, conversational way."
     )
     return create_react_agent(llm, tools, prompt=system_prompt)
-
-
-def main():
-    agent = build_agent()
-    print("Nearby Assistant — ask about gyms, restaurants, or other places near you. Ctrl+C to exit.\n")
-    while True:
-        try:
-            user_input = input("You: ").strip()
-        except (EOFError, KeyboardInterrupt):
-            print("\nGoodbye!")
-            break
-        if not user_input:
-            continue
-        result = agent.invoke({"messages": [("user", user_input)]})
-        reply = result["messages"][-1].content
-        print(f"Assistant: {reply}\n")
-
-
-if __name__ == "__main__":
-    main()

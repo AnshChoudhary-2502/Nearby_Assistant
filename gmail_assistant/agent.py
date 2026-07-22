@@ -2,7 +2,7 @@ from langchain_anthropic import ChatAnthropic
 from langgraph.checkpoint.memory import MemorySaver
 from langgraph.prebuilt import create_react_agent
 
-from tools import (
+from gmail_assistant.tools import (
     archive_email,
     create_draft,
     delete_email,

@@ -2,7 +2,7 @@ from langchain_anthropic import ChatAnthropic
 from langgraph.checkpoint.memory import MemorySaver
 from langgraph.prebuilt import create_react_agent
 
-from tools import (
+from calendar_assistant.tools import (
     create_event,
     delete_event,
     get_event,
