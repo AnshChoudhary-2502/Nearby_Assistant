@@ -1,9 +1,10 @@
 # Nearby Assistant
 
-Two independent LangGraph assistants, each with its own Streamlit chat UI:
+Three independent LangGraph assistants, each with its own Streamlit chat UI:
 
 - **`places/`** — finds nearby places (gyms, restaurants, cafes, ...) using Google Maps Platform APIs.
 - **`gmail/`** — reads, searches, and manages Gmail, with human-in-the-loop approval before any sending, replying, deleting, or archiving.
+- **`calendar_assistant/`** — reads, searches, and manages Google Calendar events, with human-in-the-loop approval before any create, update, delete, or quick-add.
 
 ## Setup
 
@@ -56,6 +57,20 @@ uv run streamlit run gmail/app.py
 ```
 First run opens a browser for OAuth consent; the refresh token is cached in `gmail/token.json` afterwards. When the agent proposes a sensitive action, approve or deny it in the chat before it proceeds.
 
+## Calendar assistant
+
+A LangGraph ReAct agent with 8 tools covering the Google Calendar API: `list_calendars`, `list_events`, `search_events`, `get_event`, `create_event`, `update_event`, `delete_event`, `quick_add_event`.
+
+Creating, updating, deleting, and quick-adding events pause the graph via LangGraph's `interrupt()` and require explicit approval in the UI before taking effect — read-only actions (listing calendars, listing/searching events, getting event details) run without interruption.
+
+**One-time setup:** create an OAuth client (Desktop App type) in [Google Cloud Console](https://console.cloud.google.com/apis/credentials) with the Google Calendar API enabled, and download it as `calendar_assistant/credentials.json`.
+
+**Run it:**
+```bash
+uv run streamlit run calendar_assistant/app.py
+```
+First run opens a browser for OAuth consent; the refresh token is cached in `calendar_assistant/token.json` afterwards. When the agent proposes a sensitive action, approve or deny it in the chat before it proceeds.
+
 ## Project structure
 
 ```
@@ -65,6 +80,12 @@ places/
 gmail/
   client.py     # Gmail OAuth + API service builder
   tools.py      # LangChain tools wrapping the Gmail API (human-in-the-loop on sensitive ones)
+  agent.py      # LangGraph agent assembly (checkpointer + tools)
+  app.py        # Streamlit chat frontend with approve/deny UI
+  credentials.json, token.json   # gitignored — created during OAuth setup
+calendar_assistant/
+  client.py     # Google Calendar OAuth + API service builder
+  tools.py      # LangChain tools wrapping the Calendar API (human-in-the-loop on mutating ones)
   agent.py      # LangGraph agent assembly (checkpointer + tools)
   app.py        # Streamlit chat frontend with approve/deny UI
   credentials.json, token.json   # gitignored — created during OAuth setup
