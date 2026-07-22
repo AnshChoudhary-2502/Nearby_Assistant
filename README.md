@@ -2,8 +2,8 @@
 
 Three independent LangGraph assistants, each with its own Streamlit chat UI:
 
-- **`places/`** — finds nearby places (gyms, restaurants, cafes, ...) using Google Maps Platform APIs.
-- **`gmail/`** — reads, searches, and manages Gmail, with human-in-the-loop approval before any sending, replying, deleting, or archiving.
+- **`places_assistant/`** — finds nearby places (gyms, restaurants, cafes, ...) using Google Maps Platform APIs.
+- **`gmail_assistant/`** — reads, searches, and manages Gmail, with human-in-the-loop approval before any sending, replying, deleting, or archiving.
 - **`calendar_assistant/`** — reads, searches, and manages Google Calendar events, with human-in-the-loop approval before any create, update, delete, or quick-add.
 
 ## Setup
@@ -34,13 +34,13 @@ The Streamlit frontend additionally requests the browser's GPS location (via `st
 
 **Run it:**
 ```bash
-uv run streamlit run places/app.py
+uv run streamlit run places_assistant/app.py
 ```
 Grant location access when prompted in the sidebar, then chat as usual (e.g. "gyms near me", "restaurants near Koramangala"). Browser geolocation only works over `localhost` or HTTPS.
 
 **Terminal REPL:**
 ```bash
-uv run places/main.py
+uv run places_assistant/main.py
 ```
 
 ## Gmail assistant
@@ -49,13 +49,13 @@ A LangGraph ReAct agent with 9 tools covering the Gmail API: `read_emails`, `sea
 
 Sending, replying, deleting, and archiving pause the graph via LangGraph's `interrupt()` and require explicit approval in the UI before taking effect — read-only and reversible actions (reading, searching, listing labels, marking read/unread, drafting) run without interruption. `delete_email` moves messages to Trash rather than permanently deleting them.
 
-**One-time setup:** create an OAuth client (Desktop App type) in [Google Cloud Console](https://console.cloud.google.com/apis/credentials) with the Gmail API enabled, and download it as `gmail/credentials.json`.
+**One-time setup:** create an OAuth client (Desktop App type) in [Google Cloud Console](https://console.cloud.google.com/apis/credentials) with the Gmail API enabled, and download it as `gmail_assistant/credentials.json`.
 
 **Run it:**
 ```bash
-uv run streamlit run gmail/app.py
+uv run streamlit run gmail_assistant/app.py
 ```
-First run opens a browser for OAuth consent; the refresh token is cached in `gmail/token.json` afterwards. When the agent proposes a sensitive action, approve or deny it in the chat before it proceeds.
+First run opens a browser for OAuth consent; the refresh token is cached in `gmail_assistant/token.json` afterwards. When the agent proposes a sensitive action, approve or deny it in the chat before it proceeds.
 
 ## Calendar assistant
 
@@ -74,10 +74,10 @@ First run opens a browser for OAuth consent; the refresh token is cached in `cal
 ## Project structure
 
 ```
-places/
+places_assistant/
   main.py       # LangGraph agent + Google Maps tools
   app.py        # Streamlit chat frontend
-gmail/
+gmail_assistant/
   client.py     # Gmail OAuth + API service builder
   tools.py      # LangChain tools wrapping the Gmail API (human-in-the-loop on sensitive ones)
   agent.py      # LangGraph agent assembly (checkpointer + tools)
